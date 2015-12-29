@@ -71,16 +71,15 @@ logger.info("Monitoring period: %d seconds", MONITORING_PERIOD)
 
 def remoteLog(dataId, value):
 	
-	values = {}
-	values['dataId'] = str(dataId)
-	values['value'] = str(value)
+	data = 'homelogdata,graph='+ str(dataId) + ' value='+str(value)
 
-	data = urllib.urlencode(values)
 	req = urllib2.Request(REMOTELOG_URL, data)
+	req.add_header('Content-Length', '%d' % len(data))
+	req.add_header('Content-Type', 'application/octet-stream')	
 	response = urllib2.urlopen(req)
 	result = response.read()
 
-	if not result=='\"insert OK\"':
+	if not result=="":
 		logger.info('remote log FAILED, status=' + result)
 
 def pingDevice(ipaddress, dataIdToLog):
@@ -93,7 +92,7 @@ def pingDevice(ipaddress, dataIdToLog):
 		out_bytes = e.output       # Output generated before error
 		code      = e.returncode   # Return code
 		logger.info(out_bytes)
-		logger.info("Ping to "+ipaddress+" is KO (code="+str(code)+")")
+		logger.info("Ping to "+dataIdToLog+" is KO (code="+str(code)+")")
 		remoteLog(dataIdToLog, "0.0")
 
 while(True):
