@@ -85,23 +85,41 @@ def remoteLog(dataId, value):
 def pingDevice(ipaddress, dataIdToLog):
 	try:
 		out_bytes = subprocess.check_output("ping -c 1 "+ ipaddress, shell=True, stderr=subprocess.STDOUT)
-		logger.info("Ping to "+dataIdToLog+" is OK")
-		remoteLog(dataIdToLog, "1.0")
-		
+		#logger.info("Ping to "+dataIdToLog+" is OK")
+		return "OK"
 	except subprocess.CalledProcessError as e:
 		out_bytes = e.output       # Output generated before error
 		code      = e.returncode   # Return code
 		logger.info(out_bytes)
-		logger.info("Ping to "+dataIdToLog+" is KO (code="+str(code)+")")
-		remoteLog(dataIdToLog, "0.0")
+		#logger.info("Ping to "+dataIdToLog+" is KO (code="+str(code)+")")
+		return "KO"
 
+# Set initial ping statuses.
+latestPingStatuses = {}
+for dataId, ipaddress in MONITORED_DEVICES:
+	latestPingStatuses[dataId] = "UNINITALIZED"
+
+#########################
+#   MAIN MONITORING LOOP
+#########################
 while(True):
 
 	try:
 		logger.info('\n========= Checking LAN devices connectivity =========')
 
 		for dataId, ipaddress in MONITORED_DEVICES:
-			pingDevice(ipaddress, dataId)
+			
+			pingStatus = pingDevice(ipaddress, dataId)
+
+			if pingStatus != latestPingStatuses[dataId]:
+				if pingStatus == "OK":
+					remoteLog(dataId, "1.0")
+					logger.info("Ping to "+dataId+" is now OK")
+				elif pingStatus == "KO":
+					remoteLog(dataId, "0.0")
+					logger.info("Ping to "+dataId+" is now KO")
+			
+			latestPingStatuses[dataId] = pingStatus
 	
 		time.sleep(MONITORING_PERIOD)
 
