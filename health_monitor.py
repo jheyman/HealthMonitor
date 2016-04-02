@@ -22,12 +22,16 @@ parser.read('health_monitor.ini')
 # Read path to log file
 LOG_FILENAME = parser.get('config', 'log_filename')
 
-# monitoring period
+# monitoring period in seconds
 MONITORING_PERIOD = parser.getint('config', 'monitoring_period')
+
+# minimum logging period in seconds
+MIN_LOG_PERIOD = parser.getint('config', 'min_log_period')
 
 # remote logging URL
 REMOTELOG_URL = parser.get('config', 'remotelog_url')
 
+# List of monitored devices names and IP addresses
 MONITORED_DEVICES = parser.items('monitored_devices')
 
 #################
@@ -99,6 +103,10 @@ latestPingStatuses = {}
 for dataId, ipaddress in MONITORED_DEVICES:
 	latestPingStatuses[dataId] = "UNINITALIZED"
 
+latestLogTimes = {}
+for dataId, ipaddress in MONITORED_DEVICES:
+	latestLogTimes[dataId] = 0.0
+
 #########################
 #   MAIN MONITORING LOOP
 #########################
@@ -111,13 +119,15 @@ while(True):
 			
 			pingStatus = pingDevice(ipaddress, dataId)
 
-			if pingStatus != latestPingStatuses[dataId]:
+			# Log the new status if it changed OR if time since last log is greater than min log period
+			if (pingStatus != latestPingStatuses[dataId]) or (time.time() - latestLogTimes[dataId] > MIN_LOG_PERIOD):
 				if pingStatus == "OK":
 					remoteLog(dataId, "1.0")
 					logger.info("Ping to "+dataId+" is now OK")
 				elif pingStatus == "KO":
 					remoteLog(dataId, "0.0")
 					logger.info("Ping to "+dataId+" is now KO")
+				latestLogTimes[dataId] = time.time()
 			
 			latestPingStatuses[dataId] = pingStatus
 	
